@@ -9,7 +9,14 @@
 <body class="bg-light">
 
 <div class="container mt-5">
-    <h2 class="text-center mb-4">💰 ระบบบันทึกรายรับรายจ่าย</h2>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>💰 ระบบบันทึกรายรับรายจ่าย</h2>
+        <div>
+            <a href="/export" class="btn btn-secondary text-white fw-bold shadow-sm me-2">💾 ส่งออกข้อมูล</a>
+            <a href="/graph" class="btn btn-info text-white fw-bold shadow-sm">📊 ดูสรุปสถิติแบบกราฟ</a>
+        </div>
+    </div>
 
     <div class="row text-center mb-4">
         <div class="col-md-4">
@@ -40,7 +47,6 @@
 
     <div class="row">
         <div class="col-lg-9 mb-4">
-            
             <div class="card mb-4 shadow-sm">
                 <div class="card-body">
                     <form action="/add" method="POST" class="row g-2">
@@ -76,16 +82,22 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     
-                    <div class="mb-3 pb-2 border-bottom">
-                        <span class="fw-bold me-2">🔍 กรองตามหมวดหมู่:</span>
-                        <a href="/" class="btn btn-sm {% if not selected_filter %}btn-dark{% else %}btn-outline-dark{% endif %} mb-1">
-                            ทั้งหมด
-                        </a>
-                        {% for cat in categories %}
-                        <a href="/?filter={{ cat.name }}" class="btn btn-sm {% if selected_filter == cat.name %}btn-primary{% else %}btn-outline-primary{% endif %} mb-1">
-                            {{ cat.name }}
-                        </a>
-                        {% endfor %}
+                    <div class="row mb-3 pb-2 border-bottom align-items-center">
+                        <div class="col-md-7">
+                            <span class="fw-bold me-2">🔍 กรอง:</span>
+                            <a href="/" class="btn btn-sm {% if not selected_filter %}btn-dark{% else %}btn-outline-dark{% endif %} mb-1">ทั้งหมด</a>
+                            {% for cat in categories %}
+                            <a href="/?filter={{ cat.name }}" class="btn btn-sm {% if selected_filter == cat.name %}btn-primary{% else %}btn-outline-primary{% endif %} mb-1">{{ cat.name }}</a>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-5">
+                            <form action="/" method="GET" class="d-flex">
+                                <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="ค้นหารายการ..." value="{{ search_query or '' }}">
+                                {% if selected_filter %}<input type="hidden" name="filter" value="{{ selected_filter }}">{% endif %}
+                                <button type="submit" class="btn btn-sm btn-outline-success">ค้นหา</button>
+                                <a href="/" class="btn btn-sm btn-outline-secondary ms-1">ล้าง</a>
+                            </form>
+                        </div>
                     </div>
 
                     <table class="table table-hover align-middle">
@@ -119,7 +131,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">ไม่พบรายการในหมวดหมู่นี้</td>
+                                <td colspan="6" class="text-center py-4 text-muted">ไม่พบรายการ</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -129,31 +141,52 @@
         </div>
 
         <div class="col-lg-3">
-            <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white fw-bold">
-                    📂 จัดการหมวดหมู่
-                </div>
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-dark text-white fw-bold">📂 จัดการหมวดหมู่</div>
                 <div class="card-body">
                     <form action="/add_category" method="POST" class="mb-3">
+                        <div class="mb-2">
+                            <input type="text" class="form-control form-control-sm" name="category_name" placeholder="ชื่อหมวดหมู่ใหม่" required>
+                        </div>
                         <div class="input-group input-group-sm">
-                            <input type="text" class="form-control" name="category_name" placeholder="ชื่อหมวดหมู่ใหม่" required>
+                            <input type="number" step="1" class="form-control" name="budget" placeholder="ตั้งงบ (บาท)">
                             <button class="btn btn-success" type="submit">เพิ่ม</button>
                         </div>
                     </form>
-
                     <h6 class="text-muted border-bottom pb-2">หมวดหมู่ทั้งหมดที่มี:</h6>
                     <ul class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
                         {% for cat in categories %}
                         <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-1">
-                            <span>📁 {{ cat.name }}</span>
-                            <a href="/delete_category/{{ cat.id }}" class="text-danger text-decoration-none fw-bold" onclick="return confirm('คุณแน่ใจหรือไม่ที่จะลบหมวดหมู่นี้?')">&times;</a>
+                            <span>📁 {{ cat.name }} {% if cat.budget > 0 %}<small class="text-muted">(งบ: {{cat.budget}})</small>{% endif %}</span>
+                            <a href="/delete_category/{{ cat.id }}" class="text-danger text-decoration-none fw-bold" onclick="return confirm('ลบหมวดหมู่นี้?')">&times;</a>
                         </li>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
-        </div>
 
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark fw-bold">⚠️ แจ้งเตือนงบประมาณ</div>
+                <div class="card-body">
+                    {% for b in budget_status %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between" style="font-size: 0.9rem;">
+                            <span class="fw-bold">{{ b.name }}</span>
+                            <span>{{ b.spent }} / {{ b.budget }} ฿</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 10px;">
+                            <div class="progress-bar {% if b.percent >= 100 %}bg-danger{% elif b.percent >= 80 %}bg-warning{% else %}bg-success{% endif %}" 
+                                 role="progressbar" style="width: {{ b.percent }}%;" 
+                                 aria-valuenow="{{ b.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted">ใช้ไปแล้ว {{ b.percent }}%</small>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0" style="font-size: 0.9rem;">ยังไม่ได้ตั้งงบประมาณ</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
